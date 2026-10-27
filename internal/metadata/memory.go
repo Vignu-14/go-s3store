@@ -46,3 +46,10 @@ func objectMapKey(bucket, key string) string{
 	return bucket + "/" + key
 }
 
+func (m *MemoryStore) SaveObject (_ context.Context, obj ObjectMeta) error {
+	m.mu.Lock()
+	mapKey := objectMapKey(obj.Bucket, obj.Key)
+	m.objects[mapKey] = obj
+	m.mu.Unlock()
+	return nil
+}
