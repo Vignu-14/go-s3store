@@ -67,3 +67,15 @@ func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (Object
 	m.mu.RUnlock()
 	return obj, nil
 }
+
+
+func (m *MemoryStore) DeleteObject(ctx context.Context, bucket, key string) error {
+	m.mu.Lock()
+	mapKey := objectMapKey(bucket, key)
+	if _, exists := m.objects[mapKey]; !exists {
+		return ErrObjectNotFound
+	}
+	delete(m.objects, mapKey)
+	m.mu.Unlock()
+	return nil
+}
