@@ -50,7 +50,7 @@ func objectMapKey(bucket, key string) string{
 // here we only store the file obj info, which the store info of the files
 func (m *MemoryStore) SaveObject (_ context.Context, obj ObjectMeta) error {
 	m.mu.Lock()
-	mapKey := objectMapKey(obj.Bucket, obj.Key)
+	mapKey := objectMapKey(obj.Bucket, obj.Key)   // first create key for the map
 	m.objects[mapKey] = obj
 	m.mu.Unlock()
 	return nil
@@ -59,7 +59,7 @@ func (m *MemoryStore) SaveObject (_ context.Context, obj ObjectMeta) error {
 
 func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (ObjectMeta, error) {
 	m.mu.RLock()  // lock the map before reading map because another goroutine can't write it 
-	mapKey := objectMapKey(bucket, key)
+	mapKey := objectMapKey(bucket, key)  // first create key for the map
 	obj, exists := m.objects[mapKey]
 	if !exists{
 		return ObjectMeta{}, ErrObjectNotFound
@@ -68,14 +68,14 @@ func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (Object
 	return obj, nil
 }
 
-
+// deleting the objects
 func (m *MemoryStore) DeleteObject(ctx context.Context, bucket, key string) error {
-	m.mu.Lock()
-	mapKey := objectMapKey(bucket, key)
-	if _, exists := m.objects[mapKey]; !exists {
+	m.mu.Lock() // locking 
+	mapKey := objectMapKey(bucket, key)  // first create key for the map
+	if _, exists := m.objects[mapKey]; !exists {  // before deleting check if key exists or not
 		return ErrObjectNotFound
 	}
 	delete(m.objects, mapKey)
-	m.mu.Unlock()
+	m.mu.Unlock()  // unlocking
 	return nil
 }
