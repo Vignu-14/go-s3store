@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -21,4 +22,10 @@ type ObjectMeta struct {
 	ETag      string      `json:"etag"`
 	Chunks    []ChunkMeta `json:"chunks"`
 	CreatedAt time.Time   `json:"created_at"`
+}
+
+type Store interface {
+	SaveObject(ctx context.Context, obj ObjectMeta) error
+	GetObject(ctx context.Context, bucket, key string) (ObjectMeta, error)
+	DeleteObject(ctx context.Context, bucket, key string) error
 }
