@@ -41,3 +41,8 @@ func NewMemoryStore() *MemoryStore {
 		objects: make(map[string]ObjectMeta),
 	}
 }
+
+func objectMapKey(bucket, key string) string{
+	return bucket + "/" + key
+}
+
