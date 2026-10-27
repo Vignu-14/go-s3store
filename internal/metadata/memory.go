@@ -56,3 +56,14 @@ func (m *MemoryStore) SaveObject (_ context.Context, obj ObjectMeta) error {
 	return nil
 }
 
+
+func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (ObjectMeta, error) {
+	m.mu.RLock()  // lock the map before reading map because another goroutine can't write it 
+	mapKey := objectMapKey(bucket, key)
+	obj, exists := m.objects[mapKey]
+	if !exists{
+		return ObjectMeta{}, ErrObjectNotFound
+	}
+	m.mu.RUnlock()
+	return obj, nil
+}
