@@ -3,6 +3,7 @@ package metadata
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 )
 
@@ -28,4 +29,15 @@ type Store interface {
 	SaveObject(ctx context.Context, obj ObjectMeta) error
 	GetObject(ctx context.Context, bucket, key string) (ObjectMeta, error)
 	DeleteObject(ctx context.Context, bucket, key string) error
+}
+
+type MemoryStore struct {
+	mu sync.RWMutex
+	objects map[string]ObjectMeta
+}
+
+func NewMemoryStore() *MemoryStore {
+	return &MemoryStore{
+		objects: make(map[string]ObjectMeta),
+	}
 }
