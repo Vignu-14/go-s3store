@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go-s3store/internal/engine"
 	"go-s3store/internal/metadata"
@@ -27,6 +28,7 @@ func main() {
 	// create the multiplexer
 	mux := http.NewServeMux()
 
+	// Upload a file
 	mux.HandleFunc("PUT /{bucket}/{key...}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := r.PathValue("bucket")
 		key := r.PathValue("key")
@@ -43,8 +45,30 @@ func main() {
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(objMeta)
 	})
-	
+
+	// Download a file
+	mux.HandleFunc("GET /{bucket}/{key}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := r.PathValue("bucket")
+		key := r.PathValue("key")
+
+		metaObj, err := metaStore.GetObject(r.Context(), bucket, key)
+		if err != nil {
+			if errors.Is(err, metadata.ErrObjectNotFound){
+				http.Error(w, "NoSuchKey: file not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", metaObj.TotalSize))
+		w.Header().Set("Etag", fmt.Sprintf("%s", fmt.Sprintf("%s", metaObj.ETag)))
+		_, err = s3Engine.GetObject(r.Context(), bucket, key, w)
+		if err != nil {
+			log.Printf("error downloading %s/%s: %v", bucket, key, err)
+		}
+	})
 }
+
 
 
 
