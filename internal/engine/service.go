@@ -142,3 +142,14 @@ func (e *StorageEngine) GetObject(ctx context.Context, bucket, key string, dst i
 	}
 	return metaObj, nil
 }
+
+func (e *StorageEngine) DeleteObject (ctx context.Context, bucket, key string) error {
+	metaObj, err := e.meta.GetObject(ctx, bucket, key)
+	if err != nil {
+		return err
+	}
+	for _, c := range metaObj.Chunks{
+		_ = e.chunks.DeleteChunk(ctx, c.ChunkID)
+	}
+	return e.meta.DeleteObject(ctx, bucket, key)
+}
