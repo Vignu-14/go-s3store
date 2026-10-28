@@ -114,7 +114,7 @@ func (e *StorageEngine) GetObject(ctx context.Context, bucket, key string, dst i
 	for _, c := range metaObj.Chunks{
 		r, err := e.chunks.GetChunk(ctx, c.ChunkID)
 		if err != nil {
-			return metadata.ObjectMeta{}, fmt.Errorf("missing chunk %d (%s)", c.Index, c.ChunkID, err)
+			return metadata.ObjectMeta{}, fmt.Errorf("missing chunk %d (%s), %w", c.Index, c.ChunkID, err)
 		}
 
 		// hash the chunk for knowing that is chunk isn't corrupted
