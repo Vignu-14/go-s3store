@@ -47,7 +47,7 @@ func main() {
 	})
 
 	// Download a file
-	mux.HandleFunc("GET /{bucket}/{key}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /{bucket}/{key...}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := r.PathValue("bucket")
 		key := r.PathValue("key")
 
@@ -68,7 +68,7 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("DELETE /{bucket}/{key}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /{bucket}/{key...}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := r.PathValue("bucket")
 		key := r.PathValue("key")
 

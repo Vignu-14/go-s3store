@@ -1,0 +1,5 @@
+testfile.bin
+*.bin
+.env
+/data
+data

@@ -59,12 +59,12 @@ func (m *MemoryStore) SaveObject (_ context.Context, obj ObjectMeta) error {
 
 func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (ObjectMeta, error) {
 	m.mu.RLock()  // lock the map before reading map because another goroutine can't write it 
+	defer m.mu.RUnlock()
 	mapKey := objectMapKey(bucket, key)  // first create key for the map
 	obj, exists := m.objects[mapKey]
 	if !exists{
 		return ObjectMeta{}, ErrObjectNotFound
 	}
-	m.mu.RUnlock()
 	return obj, nil
 }
 
@@ -72,10 +72,10 @@ func (m *MemoryStore) GetObject(ctx context.Context, bucket, key string) (Object
 func (m *MemoryStore) DeleteObject(ctx context.Context, bucket, key string) error {
 	m.mu.Lock() // locking 
 	mapKey := objectMapKey(bucket, key)  // first create key for the map
+	defer m.mu.Unlock()  // unlocking
 	if _, exists := m.objects[mapKey]; !exists {  // before deleting check if key exists or not
 		return ErrObjectNotFound
 	}
 	delete(m.objects, mapKey)
-	m.mu.Unlock()  // unlocking
 	return nil
 }

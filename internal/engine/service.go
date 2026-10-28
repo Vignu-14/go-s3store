@@ -8,6 +8,7 @@ import (
 	"go-s3store/internal/metadata"
 	"go-s3store/internal/storage"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -55,8 +56,9 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 		// io.TeeReader splits the stream into two parts one goes chunkHasher and another goes to our use
 		chunkTeeReader := io.TeeReader(limitReader, chunkHasher)
 
+		safeKey := strings.ReplaceAll(key, "/", "_")
 		// Creating the file name
-		chunkID := fmt.Sprintf("%s_%s_part_%05d_%v", bucket, key, chunkIdx, time.Now().UnixNano())
+		chunkID := fmt.Sprintf("%s_%s_part_%05d_%v", bucket, safeKey, chunkIdx, time.Now().UnixNano())
 
 		bytesWritten, err := e.chunks.PutChunk(ctx, chunkID, chunkTeeReader)
 		if err != nil {
