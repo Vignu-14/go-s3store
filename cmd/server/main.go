@@ -19,7 +19,7 @@ func main() {
 	// create the warehouse(folder) to store chunks
 	diskBackend, err := storage.NewLocalDiskBackend("./data/chunks")
 	if err != nil {
-		log.Fatalf("could not create storage folder: %w", err)
+		log.Fatalf("could not create storage folder: %v", err)
 	}
 
 	// create the engine with 1MB chunks size
