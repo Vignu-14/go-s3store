@@ -84,6 +84,9 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	log.Println("Stage 1 S3 store running on http://localhost:8080  (chunk size: 1MB)")
+	log.Fatal(http.ListenAndServe(":8080", mux))
+
 }
 
 
