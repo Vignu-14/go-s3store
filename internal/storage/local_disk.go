@@ -22,11 +22,3 @@ type LocalDiskBackend struct {
 }
 
 // NewLocalDiskBackend creates the "./data/chunks" folder if it doesn't exist yet
-func NewLocalDiskBackend(baseDir string) (*LocalDiskBackend, error) {
-	// 0755 gives read/write permissions
-	err := os.MkdirAll(baseDir, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create storage folder: %w", err)
-	}
-	return &LocalDiskBackend{baseDir: baseDir}, nil
-}
