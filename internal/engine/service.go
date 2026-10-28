@@ -56,7 +56,7 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 		chunkTeeReader := io.TeeReader(limitReader, chunkHasher)
 
 		// Creating the file name
-		chunkID := fmt.Sprintf("%s_%s_part_%05d_%s", bucket, key, chunkIdx, time.Now().UnixNano())
+		chunkID := fmt.Sprintf("%s_%s_part_%05d_%v", bucket, key, chunkIdx, time.Now().UnixNano())
 
 		bytesWritten, err := e.chunks.PutChunk(ctx, chunkID, chunkTeeReader)
 		if err != nil {
