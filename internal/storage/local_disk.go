@@ -63,3 +63,11 @@ func (l *LocalDiskBackend) GetChunk(_ context.Context, chunkID string) (io.ReadC
 	return file, nil
 }
 
+func (l *LocalDiskBackend) DeleteChunk(ctx context.Context, chunkID string) error {
+	filePath := l.chunkPath(chunkID)
+	err := os.Remove(filePath)
+	if err != nil && !os.IsNotExist(err){
+		return err
+	}
+	return nil
+}
