@@ -36,3 +36,17 @@ func (l *LocalDiskBackend) chunkPath(chunkId string) string {
 	return filepath.Join(l.baseDir, chunkId)
 }
 
+func (l *LocalDiskBackend) PutChunk(_ context.Context, chunkID string, r io.Reader) (int64, error) {
+	fullPath := l.chunkPath(chunkID)  // returns the full address for specific chunk
+	file, err := os.Create(fullPath)  // Creates a blank file
+	if err != nil {
+		return  0, fmt.Errorf("failed to create file: %w", err)
+	}
+	//  io.Copy function copies the file from src to dest, which returns how much bytes are written in dest and error
+	bytesWritten, err := io.Copy(file, r)
+	if err != nil {
+		return 0, fmt.Errorf("failed to write inside the file: %w", err)
+	}
+	return bytesWritten, nil
+}
+
