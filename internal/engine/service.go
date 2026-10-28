@@ -15,7 +15,7 @@ import (
 const DefaultChunkSize = 1 * 1024 * 1024
 
 type StorageEngine struct {
-	meta      metadata.Store  // myRef := notebook
+	meta      metadata.Store       // myRef := notebook
 	chunks    storage.ChunkBackend // myRef
 	chunkSize int64
 }
@@ -25,8 +25,8 @@ func NewStorageEngine(meta metadata.Store, chunks storage.ChunkBackend, chunkSiz
 		chunkSize = DefaultChunkSize
 	}
 	return &StorageEngine{
-		meta: meta,
-		chunks: chunks,
+		meta:      meta,
+		chunks:    chunks,
 		chunkSize: chunkSize,
 	}
 }
@@ -39,9 +39,9 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 	teeReader := io.TeeReader(r, objectHasher)
 
 	var (
-		chunks []metadata.ChunkMeta
+		chunks    []metadata.ChunkMeta
 		totalSize int64
-		chunkIdx int
+		chunkIdx  int
 	)
 
 	// loop for making chunks
@@ -71,9 +71,9 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 
 		// Adding info to chunks
 		chunks = append(chunks, metadata.ChunkMeta{
-			Index: chunkIdx,
-			ChunkID: chunkID,
-			Size: bytesWritten,
+			Index:      chunkIdx,
+			ChunkID:    chunkID,
+			Size:       bytesWritten,
 			SHA256Hash: hex.EncodeToString(chunkHasher.Sum(nil)),
 		})
 		// increase chunk index by 1 so in next iteration it can get unique value
@@ -84,16 +84,16 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 
 		// adding edge case
 		// if bytes written are lesser than chunksize then we break, becuase there is no data left.
-		if bytesWritten < e.chunkSize{
+		if bytesWritten < e.chunkSize {
 			break
-		}	
+		}
 	}
 	objMeta := metadata.ObjectMeta{
-		Bucket: bucket,
-		Key: key,
+		Bucket:    bucket,
+		Key:       key,
 		TotalSize: totalSize,
-		ETag: hex.EncodeToString(objectHasher.Sum(nil)),
-		Chunks: chunks,
+		ETag:      hex.EncodeToString(objectHasher.Sum(nil)),
+		Chunks:    chunks,
 		CreatedAt: time.Now().UTC(),
 	}
 
@@ -102,4 +102,43 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 		return metadata.ObjectMeta{}, err
 	}
 	return objMeta, nil
+}
+
+func (e *StorageEngine) GetObject(ctx context.Context, bucket, key string, dst io.Writer) (metadata.ObjectMeta, error) {
+	// get metadata of object realted to bucket and key
+	metaObj, err := e.meta.GetObject(ctx, bucket, key)
+	if err != nil {
+		return metadata.ObjectMeta{}, nil
+	}
+
+	for _, c := range metaObj.Chunks{
+		r, err := e.chunks.GetChunk(ctx, c.ChunkID)
+		if err != nil {
+			return metadata.ObjectMeta{}, fmt.Errorf("missing chunk %d (%s)", c.Index, c.ChunkID, err)
+		}
+
+		// hash the chunk for knowing that is chunk isn't corrupted
+		hasher := sha256.New()
+
+		// io.TeeReader for spliting reader
+		tee := io.TeeReader(r, hasher)
+
+		// write the data into dst(io.Writer)
+		_, err = io.Copy(dst, tee)
+		
+		// never defer inside the loop
+		// close the file before returning
+		r.Close() 
+		if err != nil {
+			return metadata.ObjectMeta{}, fmt.Errorf("failed to streaming chunk %d: %w", c.Index, err)
+		}
+
+		// Verify the hash by checking stored hash and currently calculated hash
+		currentHash := hex.EncodeToString(hasher.Sum(nil))
+
+		if currentHash != c.SHA256Hash {
+			return metadata.ObjectMeta{}, fmt.Errorf("chunk %d is corrupted: expected %s got %s", c.Index, c.SHA256Hash, currentHash)
+		}
+	}
+	return metaObj, nil
 }
