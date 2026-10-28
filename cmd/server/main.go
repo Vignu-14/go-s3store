@@ -67,6 +67,23 @@ func main() {
 			log.Printf("error downloading %s/%s: %v", bucket, key, err)
 		}
 	})
+
+	mux.HandleFunc("DELETE /{bucket}/{key}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := r.PathValue("bucket")
+		key := r.PathValue("key")
+
+		err := s3Engine.DeleteObject(r.Context(), bucket, key)
+		if err != nil {
+			if errors.Is(err, metadata.ErrObjectNotFound){
+				http.Error(w, "NoSuchKey: file not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 }
 
 
