@@ -50,3 +50,16 @@ func (l *LocalDiskBackend) PutChunk(_ context.Context, chunkID string, r io.Read
 	return bytesWritten, nil
 }
 
+
+func (l *LocalDiskBackend) GetChunk(_ context.Context, chunkID string) (io.ReadCloser, error) {
+	// create the file path of chunk id 
+	fullPath := l.chunkPath(chunkID)
+
+	file, err := os.Open(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file chunk: %w", err)
+	}
+	// here we are not closing the file becuase the caller will close the file
+	return file, nil
+}
+
