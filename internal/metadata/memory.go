@@ -12,6 +12,7 @@ var ErrObjectNotFound = errors.New("object not found")
 type ChunkMeta struct {
 	Index      int    `json:"idnex"`  // serial number
 	ChunkID    string `json:"chunk_id"`  // file name of the chunk on the disk device
+	NodeID 	   string `json:"node_id"`  //  name of the node
 	Size       int64  `json:"size"`  // size of the bytes
 	SHA256Hash string `json:"sha256_hash"`  // hash of the chunk 
 }
