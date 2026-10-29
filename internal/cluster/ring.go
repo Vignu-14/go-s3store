@@ -15,3 +15,14 @@ type HashRing struct {
 	nodeMap map[uint32]string // maps token number on the ring to actual physical node
 	nodes   map[string]bool   // set of nodes for stopping duplication
 }
+
+func NewHashRing(vnodes int) *HashRing {
+	if vnodes <= 0 {
+		vnodes = 50
+	}
+	return &HashRing{
+		vnodes: vnodes,
+		nodeMap: make(map[uint32]string),
+		nodes: make(map[string]bool),
+	}
+}
