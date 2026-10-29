@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"errors"
+	"hash/crc32"
 	"sync"
 )
 
@@ -21,8 +22,13 @@ func NewHashRing(vnodes int) *HashRing {
 		vnodes = 50
 	}
 	return &HashRing{
-		vnodes: vnodes,
+		vnodes:  vnodes,
 		nodeMap: make(map[uint32]string),
-		nodes: make(map[string]bool),
+		nodes:   make(map[string]bool),
 	}
 }
+
+func hashToken(key string) uint32 {
+	return crc32.ChecksumIEEE([]byte(key))
+}
+
