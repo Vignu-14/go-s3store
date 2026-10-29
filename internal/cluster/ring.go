@@ -131,3 +131,59 @@ func (h *HashRing) GetNode(chunkID string) (string, error) {
 }
 
 
+func (h *HashRing) GetNodes(chunkID string, count int) ([]string, error) {
+	// locking and unlocking 
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// if our servers are 0 then return the error no server
+	if len(h.nodes) == 0 {
+		return nil, ErrNoNodes
+	}
+
+	// edge case: if replicas count is greater than actual server then make count = len(h.nodes)
+	if count > len(h.nodes) {
+		count = len(h.nodes)
+	}
+
+	// calculate the hash for chunkID
+	token := hashToken(chunkID)
+
+	// binary search for searching node for token
+	idx := sort.Search(len(h.ring), func(i int) bool {
+		return h.ring[i] >= token
+	})
+
+	// edge case: in about line if it can't find the idx then this line assigns idx to 0
+	if idx == len(h.ring) {
+		idx = 0
+	}
+
+	// make the string slice to hold the server address in which we have to copy our data
+	result := make([]string, 0, count)
+
+	// the set is made for to stop duplicate server address adding in to reuslt list
+	visited := make(map[string]bool)
+
+	for len(result) < count {
+		// extract the node associated with idx
+		node := h.nodeMap[h.ring[idx]]
+
+		// first check node before inserting into reuslt slice
+		if !visited[node]{
+			// add node in the set
+			visited[node] = true
+			// add the node the result slice
+			result = append(result, node)
+		}
+
+		// increase the index by +1 for node checking
+		idx++
+
+		// edge case: when we are in last index we still make idx++ so it becomes equal to len(h.ring), so below edge case handle this
+		if idx == len(h.ring) {
+			idx = 0
+		}
+	}
+	return result, nil
+}
