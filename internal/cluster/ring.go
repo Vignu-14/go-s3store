@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"slices"
+	"sort"
 	"sync"
 )
 
@@ -30,7 +31,7 @@ func NewHashRing(vnodes int) *HashRing {
 	}
 }
 
-//  hash function which return uint32 number
+// hash function which return uint32 number
 func hashToken(key string) uint32 {
 	return crc32.ChecksumIEEE([]byte(key))
 }
@@ -38,11 +39,11 @@ func hashToken(key string) uint32 {
 func (h *HashRing) AddNode(nodeID string) {
 	// first lock the data struture so other go routine can't access it
 	h.mu.Lock()
-	defer h.mu.Unlock()  // unlock 
+	defer h.mu.Unlock() // unlock
 
 	// first check if node already exists in ring
-	if h.nodes[nodeID]{
-		return 
+	if h.nodes[nodeID] {
+		return
 	}
 
 	// add the node in the set
@@ -74,19 +75,19 @@ func (h *HashRing) RemoveNode(nodeID string) {
 	defer h.mu.Unlock()
 
 	// first check the node before removing the node
-	if !h.nodes[nodeID]{
+	if !h.nodes[nodeID] {
 		return
 	}
 
 	// remove the node from the set
 	delete(h.nodes, nodeID)
 
-	// make the new ring size 
-	newRing := make([]uint32, 0, len(h.ring) - (h.vnodes))
-	for _, token := range h.ring{
+	// make the new ring size
+	newRing := make([]uint32, 0, len(h.ring)-(h.vnodes))
+	for _, token := range h.ring {
 
 		// check if the  token related to nodeID exist in the hashmap of nodemap if yes remove the token key
-		if h.nodeMap[token] == nodeID{
+		if h.nodeMap[token] == nodeID {
 			delete(h.nodeMap, token)
 		} else {
 			// if the token does not related to nodeID then add it to new ring
@@ -95,3 +96,38 @@ func (h *HashRing) RemoveNode(nodeID string) {
 	}
 	h.ring = newRing
 }
+
+// GetNode function decides the in which node the chunk file should go into
+func (h *HashRing) GetNode(chunkID string) (string, error) {
+	// locking and unlocking
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// before getting node for chunk first check if nodes exist?
+	if len(h.ring) == 0 {
+		return "", ErrNoNodes
+	}
+
+	// get the hash of chunkID file for to point on circle
+	token := hashToken(chunkID)
+
+	// it return the index of nearest node address clockwise
+	// when the it can't find the index it will return the len of h.ring(len(h.ring))
+	// ex : uint32 size is 4billion so when last node is at 3 billion but our chunkID hash is 3.5 billion so our function can't find serverID >= chunkHash so it returns the len of h.ring
+	idx := sort.Search(len(h.ring), func(i int) bool {
+		return h.ring[i] >= token
+	})
+
+	// so in above case we make the index to 0
+	if idx == len(h.ring) {
+		idx = 0
+	}
+
+	// now we take the  node in ring for our chunkID
+	chosenToken := h.ring[idx]
+
+	// it will return the actual node address by virtual node address using hashmap search
+	return h.nodeMap[chosenToken], nil
+}
+
+
