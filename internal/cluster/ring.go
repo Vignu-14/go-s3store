@@ -67,3 +67,31 @@ func (h *HashRing) AddNode(nodeID string) {
 	slices.Sort(h.ring)
 }
 
+// Remove the node
+func (h *HashRing) RemoveNode(nodeID string) {
+	// lock and unlock the data structure
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// first check the node before removing the node
+	if !h.nodes[nodeID]{
+		return
+	}
+
+	// remove the node from the set
+	delete(h.nodes, nodeID)
+
+	// make the new ring size 
+	newRing := make([]uint32, 0, len(h.ring) - (h.vnodes))
+	for _, token := range h.ring{
+
+		// check if the  token related to nodeID exist in the hashmap of nodemap if yes remove the token key
+		if h.nodeMap[token] == nodeID{
+			delete(h.nodeMap, token)
+		} else {
+			// if the token does not related to nodeID then add it to new ring
+			newRing = append(newRing, token)
+		}
+	}
+	h.ring = newRing
+}
