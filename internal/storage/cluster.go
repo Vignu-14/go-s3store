@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"go-s3store/internal/cluster"
 	"io"
 )
@@ -22,7 +23,7 @@ type ClusterBackend struct {
 
 func NewClusterBackend(ring *cluster.HashRing) *ClusterBackend {
 	return &ClusterBackend{
-		ring: ring,
+		ring:  ring,
 		nodes: make(map[string]NodeBackend),
 	}
 }
@@ -35,3 +36,25 @@ func (c *ClusterBackend) RegisterNode(nodeID string, backend NodeBackend) {
 	c.ring.AddNode(nodeID)
 }
 
+func (c *ClusterBackend) PutChunk(ctx context.Context, chunkID string, r io.Reader) (int64, string, error) {
+	// get the node to store chunkID
+	nodeID, err := c.ring.GetNode(chunkID)
+	if err != nil {
+		return 0, "", fmt.Errorf("hash ring error: %w", err)
+	}
+
+	// first verify the does node exist?
+	backend, exists := c.nodes[nodeID]
+	if !exists {
+		return 0, "", fmt.Errorf("node %s is not registeres in cluster", nodeID)
+	}
+
+	// it writes the chunk into specified disk
+	bytesWritten, err := backend.PutChunk(ctx, chunkID, r)
+	if err != nil {
+		return bytesWritten, "", fmt.Errorf("node %s write failed: %w", nodeID, err)
+	}
+
+	// return how much bytes are written and nodeID
+	return bytesWritten, nodeID, nil
+}
