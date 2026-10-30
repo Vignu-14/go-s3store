@@ -26,3 +26,12 @@ func NewClusterBackend(ring *cluster.HashRing) *ClusterBackend {
 		nodes: make(map[string]NodeBackend),
 	}
 }
+
+// Register node adds a physical storage node to both the cluster map and the hash ring
+func (c *ClusterBackend) RegisterNode(nodeID string, backend NodeBackend) {
+	// store the backend worker in our map under its nodeID key
+	c.nodes[nodeID] = backend
+	// add the node in hash ring with virutal noeds
+	c.ring.AddNode(nodeID)
+}
+
