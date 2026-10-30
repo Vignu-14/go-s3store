@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go-s3store/internal/cluster"
 	"go-s3store/internal/engine"
 	"go-s3store/internal/metadata"
 	"go-s3store/internal/storage"
@@ -16,14 +17,38 @@ func main() {
 	// refMe = create a notebook
 	metaStore := metadata.NewMemoryStore()
 
-	// create the warehouse(folder) to store chunks
-	diskBackend, err := storage.NewLocalDiskBackend("./data/chunks")
-	if err != nil {
-		log.Fatalf("could not create storage folder: %v", err)
+	// make the ring with with 50 virtual nodes for each
+	ring := cluster.NewHashRing(50)
+
+	// cluster backend for hash ring
+	clusterBackend := storage.NewClusterBackend(ring)
+
+	nodeDirs := []string{"node-1", "node-2", "node-3"}
+
+	for _, nodeID := range nodeDirs{
+		// build the folder path
+		folderPath := fmt.Sprintf("./data/%s", nodeID)
+
+		// Initialize local disk storage for this node
+		diskBackend, err := storage.NewLocalDiskBackend(folderPath)
+		if err != nil {
+			log.Fatalf("could not initialize %s: %v", nodeID, err)
+		}
+
+		// Register this node with both the cluster and the hash ring
+		clusterBackend.RegisterNode(nodeID, diskBackend)
+
+		log.Printf("Registered storage node: %s at %s", nodeID, folderPath)
 	}
 
+	// // create the warehouse(folder) to store chunks
+	// diskBackend, err := storage.NewLocalDiskBackend("./data/chunks") // stage 1 code
+	// if err != nil {
+	// 	log.Fatalf("could not create storage folder: %v", err)
+	// }
+
 	// create the engine with 1MB chunks size
-	s3Engine := engine.NewStorageEngine(metaStore, diskBackend, engine.DefaultChunkSize)
+	s3Engine := engine.NewStorageEngine(metaStore, clusterBackend, engine.DefaultChunkSize)
 
 	// create the multiplexer
 	mux := http.NewServeMux()
