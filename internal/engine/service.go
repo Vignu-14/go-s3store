@@ -17,11 +17,11 @@ const DefaultChunkSize = 1 * 1024 * 1024
 
 type StorageEngine struct {
 	meta      metadata.Store       // myRef := notebook
-	chunks    storage.ChunkBackend // myRef
+	chunks    *storage.ClusterBackend // myRef
 	chunkSize int64
 }
 
-func NewStorageEngine(meta metadata.Store, chunks storage.ChunkBackend, chunkSize int64) *StorageEngine {
+func NewStorageEngine(meta metadata.Store, chunks *storage.ClusterBackend, chunkSize int64) *StorageEngine {
 	if chunkSize <= 0 {
 		chunkSize = DefaultChunkSize
 	}
@@ -40,8 +40,11 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 	teeReader := io.TeeReader(r, objectHasher)
 
 	var (
+		// arrary of chunks information
 		chunks    []metadata.ChunkMeta
+		// total size of the file
 		totalSize int64
+		// chunk index
 		chunkIdx  int
 	)
 
@@ -60,7 +63,7 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 		// Creating the file name
 		chunkID := fmt.Sprintf("%s_%s_part_%05d_%v", bucket, safeKey, chunkIdx, time.Now().UnixNano())
 
-		bytesWritten, err := e.chunks.PutChunk(ctx, chunkID, chunkTeeReader)
+		bytesWritten, nodeID, err := e.chunks.PutChunk(ctx, chunkID, chunkTeeReader)
 		if err != nil {
 			return metadata.ObjectMeta{}, fmt.Errorf("failed to write chunk: %w", err)
 		}
@@ -75,6 +78,7 @@ func (e *StorageEngine) PutObject(ctx context.Context, bucket, key string, r io.
 		chunks = append(chunks, metadata.ChunkMeta{
 			Index:      chunkIdx,
 			ChunkID:    chunkID,
+			NodeID: nodeID,
 			Size:       bytesWritten,
 			SHA256Hash: hex.EncodeToString(chunkHasher.Sum(nil)),
 		})
