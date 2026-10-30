@@ -59,7 +59,6 @@ func (c *ClusterBackend) PutChunk(ctx context.Context, chunkID string, r io.Read
 	return bytesWritten, nodeID, nil
 }
 
-
 func (c *ClusterBackend) GetChunk(ctx context.Context, chunkID string) (io.ReadCloser, error) {
 	// Get the node where chunkID is stored
 	nodeId, err := c.ring.GetNode(chunkID)
@@ -72,7 +71,23 @@ func (c *ClusterBackend) GetChunk(ctx context.Context, chunkID string) (io.ReadC
 	if !exists {
 		return nil, fmt.Errorf("node %s is not found in cluster", nodeId)
 	}
-	
+
 	// open and return the chunk file stream from the node
 	return backend.GetChunk(ctx, chunkID)
+}
+
+func (c *ClusterBackend) DeleteChunk(ctx context.Context, chunkID string) error {
+	// Get the node where chunkID is stored
+	nodeId, err := c.ring.GetNode(chunkID)
+	if err != nil {
+		return fmt.Errorf("hash ring error: %w", err)
+	}
+
+	// find the storage backend of this node
+	backend, exists := c.nodes[nodeId]
+	if !exists {
+		return fmt.Errorf("node %s is not found in cluster", nodeId)
+	}
+
+	return backend.DeleteChunk(ctx, chunkID)
 }
