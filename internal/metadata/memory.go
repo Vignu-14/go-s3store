@@ -21,7 +21,7 @@ type ObjectMeta struct {
 	Bucket    string      `json:"bucket"`  // bucket name
 	Key       string      `json:"key"`  // file name
 	TotalSize int64       `json:"total_size"`  // total size of the file 
-	ETag      string      `json:"etag"`  // fingerprint of the full file 
+	ETag      string      `json:"etag"`  // fingerprint of the full file // full hash of the file
 	Chunks    []ChunkMeta `json:"chunks"` // it will contains the slice of ChunkMeta struct, it will store the chunks of the file
 	CreatedAt time.Time   `json:"created_at"`  // time of the uploaded file
 }

@@ -24,6 +24,8 @@ type ClusterBackend struct {
 func NewClusterBackend(ring *cluster.HashRing) *ClusterBackend {
 	return &ClusterBackend{
 		ring:  ring,
+		// node to acutal folder path map
+		// which nodes contains which folder path map
 		nodes: make(map[string]NodeBackend),
 	}
 }
