@@ -58,3 +58,21 @@ func (c *ClusterBackend) PutChunk(ctx context.Context, chunkID string, r io.Read
 	// return how much bytes are written and nodeID
 	return bytesWritten, nodeID, nil
 }
+
+
+func (c *ClusterBackend) GetChunk(ctx context.Context, chunkID string) (io.ReadCloser, error) {
+	// Get the node where chunkID is stored
+	nodeId, err := c.ring.GetNode(chunkID)
+	if err != nil {
+		return nil, fmt.Errorf("hash ring error: %w", err)
+	}
+
+	// find the storage backend of this node
+	backend, exists := c.nodes[nodeId]
+	if !exists {
+		return nil, fmt.Errorf("node %s is not found in cluster", nodeId)
+	}
+	
+	// open and return the chunk file stream from the node
+	return backend.GetChunk(ctx, chunkID)
+}
